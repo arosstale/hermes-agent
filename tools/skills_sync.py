@@ -12,7 +12,6 @@ The manifest lives at ~/.hermes/skills/.bundled_manifest and is a simple
 newline-delimited list of skill names that have been offered to the user.
 """
 
-import json
 import logging
 import os
 import shutil
@@ -55,22 +54,42 @@ def _write_manifest(names: set):
     )
 
 
+
+def _read_skill_id(skill_dir: Path, bundled_dir: Path) -> str:
+    """Return stable skill id from frontmatter name, else category-preserved path."""
+    skill_md = skill_dir / "SKILL.md"
+    try:
+        text = skill_md.read_text(encoding="utf-8")
+    except (OSError, IOError):
+        return skill_dir.relative_to(bundled_dir).as_posix()
+
+    if text.startswith("---"):
+        parts = text.split("---", 2)
+        if len(parts) >= 3:
+            for line in parts[1].splitlines():
+                key, sep, value = line.partition(":")
+                if sep and key.strip().lower() in {"name", "id"}:
+                    value = value.strip().strip("'\"")
+                    if value:
+                        return value
+
+    return skill_dir.relative_to(bundled_dir).as_posix()
+
 def _discover_bundled_skills(bundled_dir: Path) -> List[Tuple[str, Path]]:
     """
     Find all SKILL.md files in the bundled directory.
-    Returns list of (skill_name, skill_directory_path) tuples.
+    Returns list of (stable_skill_id, skill_directory_path) tuples.
     """
     skills = []
     if not bundled_dir.exists():
         return skills
 
     for skill_md in bundled_dir.rglob("SKILL.md"):
-        path_str = str(skill_md)
-        if "/.git/" in path_str or "/.github/" in path_str or "/.hub/" in path_str:
+        if any(part in {".git", ".github", ".hub"} for part in skill_md.parts):
             continue
         skill_dir = skill_md.parent
-        skill_name = skill_dir.name
-        skills.append((skill_name, skill_dir))
+        skill_id = _read_skill_id(skill_dir, bundled_dir)
+        skills.append((skill_id, skill_dir))
 
     return skills
 
@@ -92,7 +111,7 @@ def sync_skills(quiet: bool = False) -> dict:
     - New skills (not in manifest) are copied to SKILLS_DIR and added to the manifest.
 
     Returns:
-        dict with keys: copied (list of names), skipped (int), total_bundled (int)
+        dict with keys: copied (list of ids), skipped (int), total_bundled (int)
     """
     bundled_dir = _get_bundled_dir()
     if not bundled_dir.exists():
