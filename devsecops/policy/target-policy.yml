@@ -1,0 +1,111 @@
+# The security policy of the target repository.
+#
+# It is the security policy of the devsecops kit, adapted for a
+# repository that vendors the kit:
+#
+#   - the vendored copy of the kit (devsecops/) is out of scope: the
+#     detector is not the target;
+#   - the generated files and the third-party code are out of scope, and
+#     every exclusion below carries the reason it exists;
+#   - the thresholds, the stages, the required evidence, the limits and
+#     the deny list are the ones of the kit.
+#
+# A whole source tree of the repository is never excluded: a scan that
+# looks at nothing approves a tree nobody read.
+
+version: 1
+fail_closed: true
+
+defaults:
+  # ratchet: this repository has open findings at high or above (see the fleet report); the gate blocks on critical until the backlog is cleared.
+  fail_on: critical
+
+stages:
+  secrets:
+    enabled: true
+    severity: critical
+  sast:
+    enabled: true
+  deps:
+    enabled: true
+  sbom:
+    enabled: true
+
+thresholds:
+  critical: 0
+  high: -1
+  medium: -1
+  low: -1
+  info: -1
+
+required_evidence:
+  - "scan-manifest.json"
+  - "findings.json"
+  - "sbom.json"
+  - "sarif.json"
+  - "summary.md"
+
+limits:
+  max_file_bytes: 2000000
+
+paths:
+  exclude:
+    # the vendored copy of the kit: the detector is not the target.
+    - "devsecops/**"
+    # the object store of git is not part of the working tree.
+    - ".git/**"
+    # the third-party dependencies are not the code of this repository.
+    - "**/node_modules/**"
+    # the vendored third-party code is not the code of this repository.
+    - "**/vendor/**"
+    # the CocoaPods dependencies are not the code of this repository.
+    - "**/Pods/**"
+    # the Python packages of a virtualenv are not the code of this repository.
+    - "**/site-packages/**"
+    # the output of the build of Next.js is generated, it is not the source.
+    - "**/.next/**"
+    # the output of the build of Nuxt is generated, it is not the source.
+    - "**/.nuxt/**"
+    # the output of the build of the framework is generated, it is not the source.
+    - "**/.output/**"
+    # the output of the build is generated, it is not the source.
+    - "**/build/**"
+    # the output of the bundle is generated, it is not the source.
+    - "**/dist/**"
+    # the output of the build is generated, it is not the source.
+    - "**/out/**"
+    # the output of the build of the toolchain is generated, it is not the source.
+    - "**/target/**"
+    # the virtual environment is generated, it is not the source.
+    - "**/.venv/**"
+    # the virtual environment is generated, it is not the source.
+    - "**/venv/**"
+    # the environments of tox are generated, they are not the source.
+    - "**/.tox/**"
+    # the bytecode cache of Python is generated, it is not the source.
+    - "**/__pycache__/**"
+    # the cache of the type checker is generated, it is not the source.
+    - "**/.mypy_cache/**"
+    # the cache of the test runner is generated, it is not the source.
+    - "**/.pytest_cache/**"
+    # the metadata of the installed Python packages is generated, it is not the source.
+    - "**/*.egg-info/**"
+    # the report of the coverage is generated, it is not the source.
+    - "**/coverage/**"
+    # the cache of the build tools is generated, it is not the source.
+    - "**/.cache/**"
+    # the third-party trees that the toolchains vendor are not the code of this repository.
+    - "**/third_party/**"
+    # the artefacts of a previous scan are generated, they are not the source.
+    - "reports/**"
+    # the lock files are generated, they hold no source.
+    - "**/*.lock"
+    # the lock file of npm is generated, it holds no source.
+    - "**/package-lock.json"
+    # the minified bundles are generated, they hold no source.
+    - "**/*.min.js"
+    # the source maps are generated, they hold no source.
+    - "**/*.map"
+  deny:
+    - "**/.env"
+    - "**/.env.*"

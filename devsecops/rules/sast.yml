@@ -1,0 +1,154 @@
+# SAST rule pack (plan section D3).
+#
+# The pack is *configuration*: it tells `src/scanners/sast.js` which regular
+# expression belongs to which language, how severe a match is and how to fix
+# it. It is read by `src/core/rule-loader.js`, which fails closed: a malformed
+# pack is an `E_RULES` error, never a silently empty rule set.
+#
+# Rules
+#   id               lowercase slug, unique inside the pack
+#   severity         info | low | medium | high | critical
+#   languages        the languages the rule applies to
+#   pattern          regular expression, matched line by line
+#   exclude_patterns optional regular expressions; a line matching one of
+#                    them is not reported
+#   cwe              the weakness the rule maps to
+#   message          what was found
+#   remediation      what to do about it
+#
+# The patterns are detection patterns: `rules/**` is excluded from the scan by
+# `policy/security-policy.yml`, so the pack never flags itself.
+
+version: 1
+
+languages: [javascript, typescript, python, go, rust, bash]
+
+rules:
+  - id: js.eval-call
+    severity: high
+    languages: [javascript, typescript]
+    pattern: '\beval\s*\('
+    cwe: CWE-95
+    message: "Dynamic code evaluation via eval()"
+    remediation: "Replace eval() with a validated dispatch table."
+
+  - id: js.inner-html-assign
+    severity: high
+    languages: [javascript, typescript]
+    pattern: '\.innerHTML\s*='
+    cwe: CWE-79
+    message: "Untrusted data assigned to innerHTML"
+    remediation: "Use textContent, or sanitise the value before assigning it."
+
+  - id: js.command-injection
+    severity: high
+    languages: [javascript, typescript]
+    pattern: '\bexec(Sync)?\s*\(\s*(`[^`]*\$\{|[^)]*\+)'
+    cwe: CWE-78
+    message: "Shell command built from interpolated input"
+    remediation: "Use execFile with an argument array; never build a shell string."
+
+  - id: js.tls-verification-disabled
+    severity: critical
+    languages: [javascript, typescript]
+    pattern: 'rejectUnauthorized\s*:\s*false'
+    cwe: CWE-295
+    message: "TLS certificate verification disabled"
+    remediation: "Leave certificate verification enabled and pin the CA."
+
+  - id: js.weak-hash-md5
+    severity: medium
+    languages: [javascript, typescript]
+    pattern: 'createHash\(\s*[''"]md5'
+    cwe: CWE-328
+    message: "MD5 used as a hash function"
+    remediation: "Use SHA-256 or better."
+
+  - id: py.eval-call
+    severity: high
+    languages: [python]
+    pattern: '\beval\s*\('
+    cwe: CWE-95
+    message: "Dynamic code evaluation via eval()"
+    remediation: "Replace eval() with ast.literal_eval or an explicit dispatch table."
+
+  - id: py.os-system
+    severity: high
+    languages: [python]
+    pattern: 'os\.system\s*\('
+    cwe: CWE-78
+    message: "Shell command executed via os.system"
+    remediation: "Use subprocess.run with an argument list and shell=False."
+
+  - id: py.unsafe-deserialisation
+    severity: high
+    languages: [python]
+    pattern: '(pickle\.loads?\s*\(|yaml\.load\s*\()'
+    exclude_patterns: ['yaml\.safe_load']
+    cwe: CWE-502
+    message: "Unsafe deserialisation of untrusted data"
+    remediation: "Use json.loads or yaml.safe_load."
+
+  - id: py.tls-verification-disabled
+    severity: critical
+    languages: [python]
+    pattern: 'verify\s*=\s*False'
+    cwe: CWE-295
+    message: "TLS certificate verification disabled"
+    remediation: "Keep verification enabled and provide a CA bundle."
+
+  - id: go.tls-verification-disabled
+    severity: critical
+    languages: [go]
+    pattern: 'InsecureSkipVerify\s*:\s*true'
+    cwe: CWE-295
+    message: "TLS certificate verification disabled"
+    remediation: "Set InsecureSkipVerify to false and configure a root CA."
+
+  - id: go.command-injection
+    severity: high
+    languages: [go]
+    pattern: 'exec\.Command\(\s*"(sh|bash)"'
+    cwe: CWE-78
+    message: "Shell interpreter invoked with a command string"
+    remediation: "Exec the target binary directly with an argument list."
+
+  - id: rust.unsafe-block
+    severity: medium
+    languages: [rust]
+    pattern: '\bunsafe\s*\{'
+    cwe: CWE-119
+    message: "unsafe block bypasses Rust memory guarantees"
+    remediation: "Isolate the unsafe block and document its invariants."
+
+  - id: bash.eval
+    severity: high
+    languages: [bash]
+    pattern: '\beval\s+'
+    cwe: CWE-78
+    message: "Shell eval of a constructed string"
+    remediation: "Execute the command directly instead of building a string."
+
+  - id: bash.curl-pipe-shell
+    severity: high
+    languages: [bash]
+    pattern: 'curl[^|]*\|\s*(ba)?sh'
+    cwe: CWE-494
+    message: "Remote script piped straight into a shell"
+    remediation: "Download, verify a checksum, then execute."
+
+  - id: common.bind-all-interfaces
+    severity: medium
+    languages: [javascript, typescript, python, go]
+    pattern: '0\.0\.0\.0'
+    cwe: CWE-1327
+    message: "Service bound to all network interfaces"
+    remediation: "Bind to 127.0.0.1 or a specific interface."
+
+  - id: common.weak-hash-sha1
+    severity: low
+    languages: [javascript, typescript, python, go, rust]
+    pattern: '(createHash\(\s*[''"]sha1|hashlib\.sha1|sha1\.New)'
+    cwe: CWE-328
+    message: "SHA-1 used as a hash function"
+    remediation: "Use SHA-256 or better."

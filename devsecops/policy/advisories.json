@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "updated": "2026-01-01",
+  "advisories": [
+    {
+      "id": "GHSA-example-0001",
+      "ecosystem": "npm",
+      "package": "lodash",
+      "vulnerableRange": "<4.17.21",
+      "severity": "high",
+      "cwe": "CWE-1395",
+      "title": "Prototype pollution in merge helpers",
+      "url": "https://example.invalid/advisory/GHSA-example-0001"
+    },
+    {
+      "id": "PYSEC-example-0002",
+      "ecosystem": "pypi",
+      "package": "requests",
+      "vulnerableRange": ">=2.30.0 <2.31.0",
+      "severity": "medium",
+      "cwe": "CWE-200",
+      "title": "Proxy credential leak on redirect",
+      "url": "https://example.invalid/advisory/PYSEC-example-0002"
+    },
+    {
+      "id": "GO-example-0003",
+      "ecosystem": "golang",
+      "package": "github.com/example/module",
+      "vulnerableRange": "<1.4.0",
+      "severity": "critical",
+      "cwe": "CWE-787",
+      "title": "Out-of-bounds write in the parser",
+      "url": "https://example.invalid/advisory/GO-example-0003"
+    }
+  ]
+}

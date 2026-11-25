@@ -1,0 +1,121 @@
+# Security policy (plan section D1).
+#
+# The policy is the contract between the scanners and the gate: it decides
+# which stages run, how many findings of each severity are tolerated, which
+# paths are in scope and which artefacts must exist. It is read by
+# `src/config/load-policy.js`, which fails closed: an unknown key, a wrong
+# type or an unreadable file is an `E_POLICY` error (exit code 2), never a
+# partially applied policy.
+#
+# The anchoring of the exclusions
+#   A pattern is anchored at the root of the tree unless it starts with
+#   `**/`. A vendored or a generated tree therefore has to be written
+#   `**/node_modules/**` and not `node_modules/**`: the second form only
+#   matches the tree that sits at the root, and a nested one
+#   (`scripts/fleet/node_modules/`) would be scanned as if it were source.
+
+version: 1
+fail_closed: true
+
+defaults:
+  fail_on: high
+
+stages:
+  secrets:
+    enabled: true
+    severity: critical
+  sast:
+    enabled: true
+  deps:
+    enabled: true
+  sbom:
+    enabled: true
+
+# Maximum number of findings tolerated per severity. -1 means unlimited.
+# A credential is never a medium finding: the classes of secrets are `high`
+# or `critical`, so the medium budget cannot absorb them.
+thresholds:
+  critical: 0
+  high: 0
+  medium: 5
+  low: -1
+  info: -1
+
+# Artefacts that must exist when the gate runs.
+required_evidence:
+  - scan-manifest.json
+  - findings.json
+  - sbom.json
+  - sarif.json
+  - summary.md
+
+# The limits of the scan.
+limits:
+  # The size cap of a single file (2 MB). A file above the cap is not
+  # scanned: the walk reports that it dropped it, the coverage line counts
+  # it, and a tree whose files are all above the cap fails the gate instead
+  # of looking like an empty tree.
+  max_file_bytes: 2000000
+
+paths:
+  include: []
+  exclude:
+    # The rule packs are detection patterns: scanning them would report the kit's own detection rules as findings.
+    - "rules/**"
+    # The synthetic fixtures of the tests are generated at runtime.
+    - "test/fixtures/**"
+    # The generated artefacts of a scan.
+    - "reports/**"
+    # The third-party dependencies (the kit has none, the guard stays).
+    - "**/node_modules/**"
+    # The vendored third-party code is not the code of the repository.
+    - "**/vendor/**"
+    # The third-party trees of the other package managers.
+    - "**/Pods/**"
+    # The Python packages of a virtual environment are not the code of the repository.
+    - "**/site-packages/**"
+    # The output of the build of the frameworks is generated, it is not the source.
+    - "**/.next/**"
+    # The output of the build of Nuxt is generated, it is not the source.
+    - "**/.nuxt/**"
+    # The output of the build of the framework is generated, it is not the source.
+    - "**/.output/**"
+    # The output of the build is generated, it is not the source.
+    - "**/build/**"
+    # The output of the bundle is generated, it is not the source.
+    - "**/dist/**"
+    # The output of the build is generated, it is not the source.
+    - "**/out/**"
+    # The output of the build of the toolchain is generated, it is not the source.
+    - "**/target/**"
+    # The virtual environment is generated, it is not the source.
+    - "**/.venv/**"
+    # The virtual environment is generated, it is not the source.
+    - "**/venv/**"
+    # The environments of tox are generated, they are not the source.
+    - "**/.tox/**"
+    # The bytecode cache of Python is generated, it is not the source.
+    - "**/__pycache__/**"
+    # The cache of the type checker is generated, it is not the source.
+    - "**/.mypy_cache/**"
+    # The cache of the test runner is generated, it is not the source.
+    - "**/.pytest_cache/**"
+    # The metadata of the installed Python packages is generated, it is not the source.
+    - "**/*.egg-info/**"
+    # The report of the coverage is generated, it is not the source.
+    - "**/coverage/**"
+    # The cache of the build tools is generated, it is not the source.
+    - "**/.cache/**"
+    # The third-party trees that the toolchains vendor are not the code of the repository.
+    - "**/third_party/**"
+    # The object store of git is not part of the working tree.
+    - ".git/**"
+  deny:
+    # An environment file must never be part of the tree.
+    - "**/.env"
+    - "**/.env.*"
+
+allowlist:
+  secrets:
+    - path: "test/fixtures/**"
+      reason: "synthetic fixtures generated at runtime"

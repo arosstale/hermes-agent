@@ -1,0 +1,25 @@
+{
+  "name": "devsecops-kit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zero-dependency, offline-first DevSecOps kit: secret scanning, SAST, offline dependency audit, CycloneDX SBOM, policy gating, SARIF export, CI workflows and an evidence gate.",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build.js",
+    "scan": "node bin/devsecops.js scan",
+    "verify": "node bin/devsecops.js verify",
+    "doctor": "node bin/devsecops.js doctor",
+    "sast": "node bin/devsecops.js sast",
+    "secrets": "node bin/devsecops.js secrets",
+    "sbom": "node bin/devsecops.js sbom",
+    "deps": "node bin/devsecops.js deps",
+    "policy": "node bin/devsecops.js policy",
+    "evidence": "node bin/devsecops.js evidence",
+    "validate-evidence": "node bin/devsecops.js validate-evidence",
+    "install-hook": "node bin/devsecops.js install-hook"
+  }
+}

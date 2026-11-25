@@ -1,0 +1,119 @@
+# The CI pipeline of the devsecops kit, installed by scripts/bootstrap-repo.js.
+#
+# The kit is vendored in devsecops/: the scan below runs the vendored copy
+# against the root of this repository, with the policy of the target
+# (devsecops/policy/target-policy.yml).
+#
+# There is no `npm install` step and there never will be one: the kit has
+# zero third-party dependencies.
+name: devsecops
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: the pipeline only reads the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  doctor:
+    name: doctor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Preflight of the optional tools
+        run: node devsecops/bin/devsecops.js doctor --format markdown
+
+  scan:
+    name: scan
+    needs: doctor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Scan the tree and write the report artefacts
+        continue-on-error: false
+        run: node devsecops/bin/devsecops.js scan --path . --config devsecops/policy/target-policy.yml --format json --fail-on high
+      - name: Upload the report artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devsecops-reports
+          path: reports/
+          if-no-files-found: warn
+
+  policy-gate:
+    name: policy gate
+    needs: scan
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download the report artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: devsecops-reports
+          path: reports
+      - name: Judge the findings with the security policy
+        run: node devsecops/bin/devsecops.js policy --config devsecops/policy/target-policy.yml --findings reports/findings.json --format json
+
+  sarif:
+    name: sarif
+    needs: scan
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download the report artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: devsecops-reports
+          path: reports
+      - name: Print the SARIF to the job summary
+        if: hashFiles('reports/sarif.json') != ''
+        run: cat reports/sarif.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish the SARIF as an artifact
+        if: hashFiles('reports/sarif.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: devsecops-sarif
+          path: reports/sarif.json
+          if-no-files-found: warn
