@@ -21,24 +21,25 @@ Search and download GIFs directly via the Tenor API using curl. No extra tools n
 
 ```bash
 # Search and get GIF URLs
-curl -s "https://tenor.googleapis.com/v2/search?q=thumbs+up&limit=5&key=REDACTED_sha256_446674f5a8b2_len_39" | jq -r '.results[].media_formats.gif.url'
+curl -s "https://tenor.googleapis.com/v2/search?q=thumbs+up&limit=5&key=<REDACTED>" | jq -r '.results[].media_formats.gif.url'
+The API key must be supplied through the environment (GOOGLE_API_KEY); the value that was committed here has been revoked.
 
 # Get smaller/preview versions
-curl -s "https://tenor.googleapis.com/v2/search?q=nice+work&limit=3&key=REDACTED_sha256_446674f5a8b2_len_39" | jq -r '.results[].media_formats.tinygif.url'
+curl -s "https://tenor.googleapis.com/v2/search?q=nice+work&limit=3&key=<REDACTED>" | jq -r '.results[].media_formats.tinygif.url'
 ```
 
 ## Download a GIF
 
 ```bash
 # Search and download the top result
-URL=$(curl -s "https://tenor.googleapis.com/v2/search?q=celebration&limit=1&key=REDACTED_sha256_446674f5a8b2_len_39" | jq -r '.results[0].media_formats.gif.url')
+URL=$(curl -s "https://tenor.googleapis.com/v2/search?q=celebration&limit=1&key=<REDACTED>" | jq -r '.results[0].media_formats.gif.url')
 curl -sL "$URL" -o celebration.gif
 ```
 
 ## Get Full Metadata
 
 ```bash
-curl -s "https://tenor.googleapis.com/v2/search?q=cat&limit=3&key=REDACTED_sha256_446674f5a8b2_len_39" | jq '.results[] | {title: .title, url: .media_formats.gif.url, preview: .media_formats.tinygif.url, dimensions: .media_formats.gif.dims}'
+curl -s "https://tenor.googleapis.com/v2/search?q=cat&limit=3&key=<REDACTED>" | jq '.results[] | {title: .title, url: .media_formats.gif.url, preview: .media_formats.tinygif.url, dimensions: .media_formats.gif.dims}'
 ```
 
 ## API Parameters
